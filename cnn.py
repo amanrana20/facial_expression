@@ -14,7 +14,7 @@ import pandas as pd
 seed = 7
 np.random.seed(seed)
 
-URL_DATASET = 'fer2013.csv'
+URL_DATASET = '/Users/amanrana/Desktop/fer2013.csv'
 dataset = pd.read_csv(URL_DATASET)
 
 X_train = []

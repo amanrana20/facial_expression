@@ -4,15 +4,18 @@ from sklearn.cross_validation import train_test_split
 import cv2
 import os
 
+from keras import backend as K
+K.set_image_dim_ordering('th')
 from keras.layers import Input, Dense, Convolution2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Dropout, Flatten, merge, Reshape, Activation
 from keras.models import Model
 from keras.regularizers import l2
 from keras.optimizers import Adam
+from keras.utils import np_utils
 
 
 # Some parameters
 PATH_DATASET = 'Dataset/'
-NB_EPOCH = 30
+NB_EPOCH = 10
 BATCH_SIZE = 200
 VALIDATION_SPLIT = 0.3
 VERBOSE = 2
@@ -26,7 +29,7 @@ def get_data(test_train_split):
         for file in files:
             if file[-4:] == '.jpg':
                 path = '{}Gesture_{}/{}'.format(PATH_DATASET, file[0], file)
-                pic = (cv2.imread(path)).astype(int)
+                pic = np.array(cv2.imread(path)).reshape(3, 224, 224)
                 dataset.append((pic, int(file[0])))
 
     filter(None, dataset)
@@ -38,24 +41,23 @@ def get_data(test_train_split):
     y = []
 
     for i in range(len(dataset)):
-        print dataset[i]
         try:
-            item = list(dataset[i])
-            if np.any(None, item) != True:
-                x.append(item[0])
-                y.append(item[1])
-            else:
-                continue
+            item = dataset[i]
+            x.append(item[0])
+            y.append(item[1])
         except:
             continue
 
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=test_train_split)
-
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+    Y_train = np.array(Y_train)
+    Y_test = np.array(Y_test)
     return X_train, Y_train, X_test, Y_test
 
 
-def create_model():
-    inp = Input(shape=(3, 224, 224), name='Input')
+def create_model(inp_shape, out_shape):
+    inp = Input(shape=inp_shape, name='Input')
     conv_1 = Convolution2D(32, 3, 3, border_mode='same', activation='relu', name='conv_1')(inp)
     conv_2 = Convolution2D(32, 3, 3, border_mode='same', activation='relu', name='conv_2')(conv_1)
 
@@ -114,7 +116,7 @@ def create_model():
     max_pool_6 = MaxPooling2D((2, 2), strides=(2, 2), name='max_pool_6')(inception5_merge)
     flat_1 = Flatten()(max_pool_6)
     hidden_1 = Dense(64, activation='relu', name='hidden_2')(flat_1)
-    out = Dense(7, activation='softmax', name='out')(hidden_1)
+    out = Dense(out_shape, activation='softmax', name='out')(hidden_1)
 
     model = Model(input=inp, output=out)
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
@@ -124,14 +126,16 @@ def create_model():
 
 # Getting the data
 X_train, Y_train, X_test, Y_test = get_data(TEST_TRAIN_SPLIT)
-print 'here'
+Y_train = np_utils.to_categorical(Y_train)
+Y_test = np_utils.to_categorical(Y_test)
+
 # Creating the model
-model = create_model()
+model = create_model(X_train.shape[1:], Y_train.shape[1])
 model.summary()
 
 # Training the model
 model.fit(X_train, Y_train, validation_split=VALIDATION_SPLIT, nb_epoch=NB_EPOCH, batch_size=BATCH_SIZE, verbose=VERBOSE)
 
 # Evaluating the model
-scores = model.evaluate(X_test, Y_test, verbose=2)
+scores = model.evaluate(X_test, Y_test, verbose=VERBOSE)
 print("\nCNN Accuracy: %.2f%%" % (scores[1]*100))

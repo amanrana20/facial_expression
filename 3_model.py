@@ -1,118 +1,103 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Dec 03 19:02:31 2016
-
 @author: syamprasadkr
 """
+# This is a program to train a CNN model to predict facial expressions
 
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 03 23:33:59 2016
-
-@author: syamprasadkr
-"""
-
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Flatten, Activation
+from keras.layers import Convolution2D, MaxPooling2D, ZeroPadding2D
+from keras.layers.normalization import BatchNormalization
+from keras.optimizers import Adam
+import cv2
 import numpy as np
+import theano
+import os
 from keras import backend as K
 K.set_image_dim_ordering('th')
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import Activation
-from keras.layers import Flatten
-from keras.layers.convolutional import Convolution2D
-from keras.layers.convolutional import MaxPooling2D
-from keras.utils import np_utils
-import pandas as pd
 
-# fix random seed for reproducibility
+# Fix seed for reproducibility
 seed = 7
 np.random.seed(seed)
 
-URL_DATASET = 'fer2013.csv'
-dataset = pd.read_csv(URL_DATASET)
+# Set directory paths
+PATH = 'data'
+EXT1 = 'train'
+EXT2 = 'val'
+EXT3 = 'test'
+PATH1 = os.path.join(PATH, EXT1)
+PATH2 = os.path.join(PATH, EXT2)
+PATH3 = os.path.join(PATH, EXT3)
 
-X_train = []
+img_width, img_height = 48, 48
+#kaggle dataset
+nb_train_samples = 28703
+nb_validation_samples = 7170
 
-X_raw = dataset['pixels']
-for row in X_raw:
-    X_train.append(row.split(' '))
+# Number of training epochs
+nb_epoch = 20 
 
-
-#pd.set_option('display.max_rows', None)
-#pd.set_option('display.max_columns', None)
-#print(pd.DataFrame(X_train).skew())
-
-
-Y_train = np_utils.to_categorical(np.array(dataset['emotion']))
-print len(Y_train)
-X_train = (np.array(X_train)).reshape(len(Y_train), 1, 48, 48)
-
-num_classes = 7
-
-# Creating the model
+#CNN model
 model = Sequential()
-model.add(Convolution2D(32, 3, 3, input_shape = (1, 48, 48)))
+model.add(Convolution2D(64, 3, 3, input_shape = (1, img_width, img_height)))
+model.add(BatchNormalization())
 model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-model.add(Convolution2D(32, 3, 3))
-model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-model.add(Convolution2D(32, 3, 3))
-model.add(Activation('relu'))
-model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-model.add(Convolution2D(64, 3, 3))
-model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-model.add(Convolution2D(64, 3, 3))
-model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-model.add(Convolution2D(64, 3, 3))
-model.add(Activation('relu'))
-model.add(MaxPooling2D((2,2), strides = (1,1)))
+model.add(MaxPooling2D((2,2), strides = (2,2)))
 
 model.add(Convolution2D(128, 3, 3))
+model.add(BatchNormalization())
 model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
+model.add(MaxPooling2D((2,2), strides = (2,2)))
 
-model.add(Convolution2D(128, 3, 3))
+model.add(Convolution2D(256, 3, 3))
+model.add(BatchNormalization())
 model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
+model.add(MaxPooling2D((2,2), strides = (2,2)))
 
-model.add(Convolution2D(128, 3, 3))
+model.add(Convolution2D(512, 3, 3))
+model.add(BatchNormalization())
 model.add(Activation('relu'))
-model.add(MaxPooling2D((2,2), strides = (1,1)))
-
-#model.add(Convolution2D(256, 3, 3))
-#model.add(Activation('relu'))
-##model.add(MaxPooling2D((2,2), strides = (1,1)))
-#
-#model.add(Convolution2D(256, 3, 3))
-#model.add(Activation('relu'))
-##model.add(MaxPooling2D((2,2), strides = (1,1)))
-#
-#model.add(Convolution2D(256, 3, 3))
-#model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
-#model.add(Convolution2D(512, 3, 3))
-#model.add(Activation('relu'))
-#model.add(MaxPooling2D((2,2), strides = (1,1)))
+model.add(MaxPooling2D((2,2), strides = (2,2)))
 
 model.add(Flatten())
-model.add(Dense(32, activation = 'relu'))
-model.add(Dense(num_classes, activation = 'softmax'))
-print model.summary()
+model.add(Dense(1024, activation = 'relu'))
+model.add(Dense(7, activation = 'softmax'))
 
-# Compile model
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(X_train[100:], Y_train[100:], validation_split=0.1, nb_epoch=10, batch_size=100, verbose=2)
+model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
 
-# Evaluating the model
-scores = model.evaluate(X_train[:100], Y_train[:100], verbose=0)
-print("CNN Error: %.2f%%" % (100-scores[1]*100))
+# Image augmentation to make the training more robust
+train_datagen = ImageDataGenerator(rescale = 1./255, 
+                                   zoom_range = 0.2, 
+                                   horizontal_flip = True)
+                                 
+test_datagen = ImageDataGenerator(rescale = 1./255)
+
+# Load data in batches to train and validate
+train_generator = train_datagen.flow_from_directory(PATH1,
+                                                    target_size = (img_width, img_height),
+                                                    color_mode = 'grayscale',                                                    
+                                                    batch_size = 100,
+                                                    class_mode = 'categorical')  
+                                    
+validation_generator = test_datagen.flow_from_directory(PATH2,
+                                                    target_size = (img_width, img_height),
+                                                    color_mode = 'grayscale',                                                    
+                                                    batch_size = 100,
+                                                    class_mode = 'categorical')                                    
+                
+# Perform the training (fits the model on data)
+history = model.fit_generator(train_generator,
+                    samples_per_epoch = nb_train_samples,
+                    nb_epoch = nb_epoch,
+                    validation_data = validation_generator,
+                    nb_val_samples = nb_validation_samples)
+
+# Save the weights to be used in inference model
 model.save_weights('3_model.h5')
+
+
+
+
+

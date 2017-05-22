@@ -7,10 +7,9 @@ The objective of this project is to perform real-time facial expression recognit
 Syamprasad K Rajagopalan  
 skaryattuparambi@wpi.edu  
 https://www.linkedin.com/in/syamprasad-k-rajagopalan-a218b173  
-
 Aman Rana  
-
+arana@wpi.edu  
 Ulkesh Solanki  
-
+ussolanki@wpi.edu  
 Advisor: Prof. Carlos Morato  
-
+cwmorato@wpi.edu  

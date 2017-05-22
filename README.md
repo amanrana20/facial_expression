@@ -5,7 +5,12 @@ The objective of this project is to perform real-time facial expression recognit
 
 # Authors: 
 Syamprasad K Rajagopalan  
+skaryattuparambi@wpi.edu  
+https://www.linkedin.com/in/syamprasad-k-rajagopalan-a218b173  
+
 Aman Rana  
+
 Ulkesh Solanki  
-Advisor: Prof. Carlos Morato
+
+Advisor: Prof. Carlos Morato  
 
